@@ -15,15 +15,15 @@ grid = model(rgb, K)  # [1, 24, 128, 32, 128]  occ + rgb + 20 sem channels
 ```
 
 **Benchmarks**:
-
-| Metric | Value |
-|---|---|
-| FPS | 15.5 |
-| Latency | 64.4 ms |
-| VRAM | 361 MB |
-| Power (VDD_IN) | 15.5 W |
-| Occupancy IoU | 31.6% |
-| Semantic mIoU | 8.4% |
+<table width="100%">
+  <tr><th>Metric</th><th>Value</th></tr>
+  <tr><td>FPS</td><td>15.5</td></tr>
+  <tr><td>Latency</td><td>64.4 ms</td></tr>
+  <tr><td>VRAM</td><td>361 MB</td></tr>
+  <tr><td>Power (VDD_IN)</td><td>15.5 W</td></tr>
+  <tr><td>Occupancy IoU</td><td>31.6%</td></tr>
+  <tr><td>Semantic mIoU</td><td>8.4%</td></tr>
+</table>
 
 > Evaluated with SemanticKITTI seq 08 on Jetson Orin Nano 8GB for 60s.
 
