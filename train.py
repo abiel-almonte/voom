@@ -118,28 +118,25 @@ def build_optimizer(model, lrs):
     )
 
 
-def save_ckpt(model, optimizer, scaler, step, ckpt_dir):
+def save_ckpt(model, optimizer, step, ckpt_dir):
     weights_dir = Path(ckpt_dir) / "weights"
     weights_dir.mkdir(parents=True, exist_ok=True)
     torch.save(
         {
             "model": model.state_dict(),
             "optimizer": optimizer.state_dict(),
-            "scaler": scaler.state_dict(),
             "step": step,
         },
         weights_dir / f"step_{step}.pt",
     )
 
 
-def load_ckpt(model, optimizer, scaler, init_path):
+def load_ckpt(model, optimizer, init_path):
     if not init_path or not Path(init_path).exists():
         return 0
     ckpt = torch.load(init_path, weights_only=True)
     model.load_state_dict(ckpt["model"], strict=False)
     optimizer.load_state_dict(ckpt["optimizer"])
-    if "scaler" in ckpt:
-        scaler.load_state_dict(ckpt["scaler"])
     return ckpt.get("step", 0)
 
 
@@ -166,8 +163,7 @@ def main():
     )
 
     optimizer = build_optimizer(model, config.train["learning_rates"])
-    scaler = torch.amp.GradScaler("cuda")
-    step = load_ckpt(model, optimizer, scaler, config.train.get("init_path"))
+    step = load_ckpt(model, optimizer, config.train.get("init_path"))
     if step:
         log.info(f"resumed from step {step}")
 
@@ -179,19 +175,17 @@ def main():
         for batch in loader:
             rgb, K, gt_occ, gt_sem, da_depth = [x.to(device) for x in batch]
 
-            with torch.amp.autocast("cuda", dtype=torch.float16):
-                pred_grid, depth_logits = model(rgb, K)
-                losses = {
-                    "occ": loss_occ(pred_grid, gt_occ),
-                    "sem": loss_sem(pred_grid, gt_sem, gt_occ),
-                    "photo": loss_photo(pred_grid, rgb, da_depth, K),
-                    "depth": loss_depth(depth_logits, da_depth),
-                }
-                total = sum(weights.get(k, 0.0) * v for k, v in losses.items())
+            pred_grid, depth_logits = model(rgb, K)
+            losses = {
+                "occ": loss_occ(pred_grid, gt_occ),
+                "sem": loss_sem(pred_grid, gt_sem, gt_occ),
+                "photo": loss_photo(pred_grid, rgb, da_depth, K),
+                "depth": loss_depth(depth_logits, da_depth),
+            }
+            total = sum(weights.get(k, 0.0) * v for k, v in losses.items())
 
-            scaler.scale(total).backward()
-            scaler.step(optimizer)
-            scaler.update()
+            total.backward()
+            optimizer.step()
             optimizer.zero_grad()
 
             for k, v in losses.items():
@@ -204,7 +198,7 @@ def main():
                 log_losses(epoch_metrics, epoch_steps, len(loader))
 
             if step % config.train["save_every"] == 0:
-                save_ckpt(model, optimizer, scaler, step, config.train["ckpt_dir"])
+                save_ckpt(model, optimizer, step, config.train["ckpt_dir"])
 
         log.info(f"epoch {epoch}: {dict(epoch_metrics)}")
 
