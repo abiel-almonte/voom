@@ -1,6 +1,8 @@
 `voom` **- VOlumetric Occupancy from Monocular video. Real-time on a Jetson.**
 
-
+<p align="center">
+  <img src="assets/demo.gif" alt="VOOM demo" width="800"/>
+</p>
 
 **15 FPS** on a Jetson Orin Nano, drawing **400 MB** and **16 W**. **31.6 IoU** and **8.4 mIoU** on SemanticKITTI seq 08.
 
