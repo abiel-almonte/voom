@@ -4,9 +4,9 @@ common:
     std: [0.229, 0.224, 0.225]
 
   grid_dims:
-    x_voxels: 256
+    x_voxels: 128
     y_voxels: 32
-    z_voxels: 256
+    z_voxels: 128
 
   # semantic kitti convention
   meters_per_voxel: 0.2
@@ -17,7 +17,7 @@ model:
   out_ch: 24 # >= trained channels
   lss_embed_dim: 64
   lss_refine_dim: 48
-  depth_bins: 256 # match z voxels
+  depth_bins: 128 # match z voxels
 
 training:
   epochs: 20
