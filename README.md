@@ -49,7 +49,6 @@ python deploy/run.py # GL viewer + side-by-side mp4 recording
 ```
 
 ---
-
-Built on [DINOv2](https://github.com/facebookresearch/dinov2) and a [Lift-Splat-Shoot](https://arxiv.org/abs/2008.05711) style implementation. Trained on [SemanticKITTI](http://semantic-kitti.org/) with [Depth-Anything-V2](https://github.com/DepthAnything/Depth-Anything-V2) for photometric & depth supervision.
-
 **voom**, occupancy at the edge.
+
+> Built on [DINOv2](https://github.com/facebookresearch/dinov2) backbone and a [Lift-Splat-Shoot](https://arxiv.org/abs/2008.05711) style head. Trained on [SemanticKITTI](http://semantic-kitti.org/) with [Depth-Anything-V2](https://github.com/DepthAnything/Depth-Anything-V2) for photometric & depth supervision.
