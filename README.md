@@ -35,7 +35,6 @@ grid = model(rgb, K)  # [1, 24, 128, 32, 128]  occ + rgb + 20 sem channels
 | FPS | 15.5 |
 | VRAM | 361 MB |
 
-Full per-class IoU + per-stage timings: [blog post / HF model card].
 
 Train your own:
 ```bash
@@ -46,11 +45,11 @@ python train.py  # config.yaml drives everything
 Deploy on Jetson:
 ```bash
 python deploy/build_trt.py  # build TRT engines
-python deploy/run.py        # GL viewer + side-by-side mp4 recording
+python deploy/run.py # GL viewer + side-by-side mp4 recording
 ```
 
 ---
 
 Built on [DINOv2](https://github.com/facebookresearch/dinov2) and a [Lift-Splat-Shoot](https://arxiv.org/abs/2008.05711) style implementation. Trained on [SemanticKITTI](http://semantic-kitti.org/) with [Depth-Anything-V2](https://github.com/DepthAnything/Depth-Anything-V2) for photometric & depth supervision.
 
-**voom**, dense 3D from one camera under 25W.
+**voom**, occupancy at the edge.
