@@ -6,12 +6,6 @@
 
 Predict dense semantic 3D occupancy from a single RGB image.
 
-```bash
-git clone https://github.com/abielalmonte/voom && cd voom
-uv sync
-./scripts/download_weights.sh
-```
-
 ```python
 from voom import VOOMv2, load_state_dict
 
@@ -20,22 +14,25 @@ model.load_state_dict(load_state_dict("release/voom.safetensors", "cuda"))
 grid = model(rgb, K)  # [1, 24, 128, 32, 128]  occ + rgb + 20 sem channels
 ```
 
-**Accuracy** (SemanticKITTI seq 08):
-
-| Metric | Value |
-|---|---|
-| Occupancy IoU | 0.316 |
-| Semantic mIoU | 0.084 |
-
-**Speed** (Jetson Orin Nano 8GB):
+**Benchmarks**:
 
 | Metric | Value |
 |---|---|
 | FPS | 15.5 |
+| Latency | 64.4 ms |
 | VRAM | 361 MB |
+| Power (VDD_IN) | 15.5 W |
+| Occupancy IoU | 31.6% |
+| Semantic mIoU | 8.4% |
 
+> Evaluated with SemanticKITTI seq 08 on Jetson Orin Nano 8GB for 60s.
 
-Train your own:
+Download weights:
+```bash
+./scripts/download_weights.sh
+```
+
+Or train your own:
 ```bash
 ./scripts/generate_da_depth.sh ~/path/to/skitti/dataset
 python train.py  # config.yaml drives everything
@@ -50,4 +47,4 @@ python deploy/run.py # GL viewer + side-by-side mp4 recording
 ---
 **voom**, occupancy at the edge.
 
-> Built on [DINOv2](https://github.com/facebookresearch/dinov2) backbone and a [Lift-Splat-Shoot](https://arxiv.org/abs/2008.05711) style head. Trained on [SemanticKITTI](http://semantic-kitti.org/) with [Depth-Anything-V2](https://github.com/DepthAnything/Depth-Anything-V2) for photometric & depth supervision.
+> Built on [DINOv2](https://github.com/facebookresearch/dinov2) backbone and a [Lift-Splat-Shoot](https://arxiv.org/abs/2008.05711) style head. Trained on [SemanticKITTI](http://semantic-kitti.org/) with [Depth-Anything-V2](https://github.com/DepthAnything/Depth-Anything-V2) for photometric and depth supervision.
