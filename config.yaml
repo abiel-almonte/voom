@@ -1,0 +1,117 @@
+common:
+  preprocess:
+    mean: [0.485, 0.456, 0.406]
+    std: [0.229, 0.224, 0.225]
+
+  grid_dims:
+    x_voxels: 256
+    y_voxels: 32
+    z_voxels: 256
+
+  # semantic kitti convention
+  meters_per_voxel: 0.2
+  cam_height_m: 1.65
+
+model:
+  dinov2_size: "small"
+  out_ch: 24 # >= trained channels
+  lss_embed_dim: 64
+  lss_refine_dim: 48
+  depth_bins: 256 # match z voxels
+
+training:
+  epochs: 20
+  batch_size: 1
+  num_workers: 4
+  save_every: 500 # steps
+  ckpt_dir: checkpoints/long
+  init_path: null #checkpoints/rev1/weights/step_117000.pt
+
+  height: 238
+  width: 322
+  
+  learning_rates:
+    vit: 1.0e-06
+    dpt: 1.0e-05
+    lss: 0.0005
+
+  loss_weights:
+    occ: 1.0
+    sem: 1.0 # 0.0 = no semantic channels trained
+    photo: 1.0 # 0.0 = no rgb channels trained
+    depth: 0.1
+
+  data:
+    root_dir: ~/workspace/skitti/dataset
+    train_seqs: [0, 1, 2, 3, 4, 5, 6, 7, 9, 10]
+    valid_seqs: [8]
+    height: 376
+    width: 1241
+
+  semantic:
+    enabled:
+      - empty
+      - car
+      - bicycle
+      - truck
+      - motorcycle
+      - other-vehicle
+      - person
+      - bicyclist
+      - motorcyclist
+      - road
+      - parking
+      - sidewalk
+      - other-ground
+      - building
+      - fence
+      - vegetation
+      - trunk
+      - terrain
+      - pole
+      - traffic-sign
+
+deployment:
+  weights: checkpoints/voom_rev7.pt
+  engine_dir: deploy/engines
+  trtexec: /usr/src/tensorrt/bin/trtexec
+
+  camera:
+    device: 0
+    capture_size: [1280, 960]
+    fps: 30
+    target_hfov_deg: 90
+
+    # fisheye lens calibration (chessboard, 18 views, 0.35px reprojection rms)
+    calib_size: [320, 240]
+    fx: 118.08846355968736
+    fy: 120.03947818595628
+    cx: 165.00729548627575
+    cy: 112.76887013808171
+    distortion: [0.28724976388146756, 0.30221338654967755, -0.2348981581003682, 0.07256287275623055]
+
+viz:
+  panel_height: 480
+  panel_width: 640
+  
+  colors:
+    empty: [0, 0, 0]
+    car: [70, 90, 120] # steel blue-gray
+    bicycle: [140, 160, 170] # light-gray
+    motorcycle: [60, 60, 80] # dark gray-blue
+    truck: [90, 80, 70] # warm gray
+    other_vehicle: [80, 100, 110] # slate
+    person: [200, 140, 100] # warm tan
+    bicyclist: [180, 130, 100] # warm tan
+    motorcyclist: [160, 120, 90] # tan
+    road: [50, 50, 55] # dark asphalt
+    parking: [65, 65, 70] # ligher asphalt
+    sidewalk: [120, 115, 105] # concrete gray
+    other_ground: [95, 90, 75] # dirt
+    building: [180, 165, 140] # beige
+    fence: [140, 120, 90] # wood brown
+    vegetation: [60, 110, 45] # green
+    trunk: [60, 110, 45] # green
+    terrain: [130, 150, 80] # olive green
+    pole: [110, 110, 115] # metal gray
+    traffic_sign: [180, 40, 40] # muted red
