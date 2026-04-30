@@ -94,7 +94,7 @@ def frustum_mask(gx, gy, gz, mpv, fx, cx, fy, cy, img_w, img_h, offset_m):
     return mask
 
 
-def skitti_to_voom_grid(grid_256, gx, gz, offset_m, mpv, fmask=None):
+def skitti_to_voom_grid(grid_256, gx, gz, fmask=None):
     gy = 32
     j_lo = 128 - gx // 2
     j_hi = j_lo + gx
@@ -102,11 +102,9 @@ def skitti_to_voom_grid(grid_256, gx, gz, offset_m, mpv, fmask=None):
 
     out = np.zeros((gx, gy, gz), dtype=np.float32)
     crop = grid_256[:i_hi, j_lo:j_hi, :]
-    y_off = int(offset_m[1] / mpv)
     for k in range(32):
-        vj = y_off - k
-        if 0 <= vj < gy:
-            out[:gx, vj, :i_hi] = crop[:i_hi, :gx, k].T
+        vj = (gy - 1) - k
+        out[:gx, vj, :i_hi] = crop[:i_hi, :gx, k].T
 
     if fmask is not None:
         out *= fmask
@@ -199,24 +197,12 @@ class SemanticKITTIDataset(Dataset):
 
         gx, gy, gz = config.grid_dim
         label = np.fromfile(label_path, dtype=np.uint16).reshape(256, 256, 32)
-        occ_voom = skitti_to_voom_grid(
-            label_to_occ(label),
-            gx,
-            gz,
-            config.offset_m,
-            config.mpv,
-            fmask=self.fmask,
-        )
+        occ_voom = skitti_to_voom_grid(label_to_occ(label), gx, gz)
         occ = torch.from_numpy(occ_voom).unsqueeze(0)  # [1, gx, gy, gz]
 
         if self.load_sem:
             sem_voom = skitti_to_voom_grid(
-                label_to_sem(label).astype(np.float32),
-                gx,
-                gz,
-                config.offset_m,
-                config.mpv,
-                fmask=self.fmask,
+                label_to_sem(label).astype(np.float32), gx, gz,
             )
             sem = torch.from_numpy(sem_voom).long()  # [gx, gy, gz]
         else:
