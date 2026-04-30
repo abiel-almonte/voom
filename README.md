@@ -27,11 +27,10 @@ grid = model(rgb, K)  # [1, 24, 128, 32, 128]  occ + rgb + 20 sem channels
 | Occupancy IoU | 0.316 |
 | Semantic mIoU | 0.084 |
 
-**Speed** (Jetson Orin Nano 8GB, TensorRT FP16):
+**Speed** (Jetson Orin Nano 8GB):
 
 | Metric | Value |
 |---|---|
-| Latency | 64.39 ms |
 | FPS | 15.5 |
 | VRAM | 361 MB |
 
@@ -44,7 +43,7 @@ python train.py  # config.yaml drives everything
 
 Deploy on Jetson:
 ```bash
-python deploy/build_trt.py  # build TRT engines
+python deploy/build_trt.py # build TRT engines
 python deploy/run.py # GL viewer + side-by-side mp4 recording
 ```
 
