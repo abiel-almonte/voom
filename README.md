@@ -14,18 +14,7 @@ model.load_state_dict(load_state_dict("release/voom.safetensors", "cuda"))
 grid = model(rgb, K)  # [1, 24, 128, 32, 128]  occ + rgb + 20 sem channels
 ```
 
-**Benchmarks**:
-<table width="100%">
-  <tr><th>Metric</th><th>Value</th></tr>
-  <tr><td>FPS</td><td>15.5</td></tr>
-  <tr><td>Latency</td><td>64.4 ms</td></tr>
-  <tr><td>VRAM</td><td>361 MB</td></tr>
-  <tr><td>Power (VDD_IN)</td><td>15.5 W</td></tr>
-  <tr><td>Occupancy IoU</td><td>31.6%</td></tr>
-  <tr><td>Semantic mIoU</td><td>8.4%</td></tr>
-</table>
-
-> Evaluated with SemanticKITTI seq 08 on Jetson Orin Nano 8GB for 60s.
+**64.4 ms** latency per frame, **361 MB** VRAM, **15.5 W** VDD_IN on a Jetson Orin Nano 8GB. Occupancy IoU 31.6%, Semantic mIoU 8.4% on SemanticKITTI seq 08.
 
 Download weights:
 ```bash
