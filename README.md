@@ -16,7 +16,7 @@ grid = model(rgb, K)  # [1, 24, 128, 32, 128]  occ + rgb + 20 sem channels
 
 **Benchmarks:**
 
-**64.4 ms** latency per frame, **361 MB** VRAM, and **15.5 W** VDD_IN on a Jetson Orin Nano 8GB. **31.6 IoU** and **8.4 mIoU** on SemanticKITTI seq 08.
+**64.4 ms** latency per frame, **<400 MB** VRAM, and **<16 W** VDD_IN on a Jetson Orin Nano 8GB. **31.6 IoU** and **8.4 mIoU** on SemanticKITTI seq 08.
 
 Download weights:
 ```bash
