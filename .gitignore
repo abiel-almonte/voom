@@ -5,5 +5,9 @@
 __pycache__/
 
 third_party/
+release/
 checkpoints/*/weights/
 checkpoints/*/eval/
+
+*.onnx
+*.trt
