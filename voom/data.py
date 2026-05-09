@@ -1,5 +1,3 @@
-"""SemanticKITTI dataset for VOOMv2 training."""
-
 import os
 from pathlib import Path
 
@@ -112,12 +110,15 @@ def skitti_to_voom_grid(grid_256, gx, gz, fmask=None):
 
 
 class SemanticKITTIDataset(Dataset):
-    def __init__(self, root, seqs, resize, load_sem=False, load_depth=False):
+    def __init__(
+        self, root, seqs, resize, load_sem=False, load_depth=False, load_sem_2d=False
+    ):
         super().__init__()
         self.resize = tuple(resize)  # (H, W)
         self.root = Path(root)
         self.load_sem = load_sem
         self.load_depth = load_depth
+        self.load_sem_2d = load_sem_2d
 
         self.samples = []  # (img_path, label_path, calib_path, depth_path|None)
         for seq in seqs:
@@ -218,4 +219,10 @@ class SemanticKITTIDataset(Dataset):
         else:
             depth = torch.zeros(1, H, W)
 
-        return rgb, K, occ, sem, depth
+        if self.load_sem_2d:
+            sem_2d_path = Path(label_path).with_suffix(".label_2d.npy")
+            sem_2d = torch.from_numpy(np.load(sem_2d_path)).long()  # [H, W]
+        else:
+            sem_2d = torch.zeros(H, W, dtype=torch.long)
+
+        return rgb, K, occ, sem, depth, sem_2d
