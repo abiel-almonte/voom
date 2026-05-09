@@ -11,7 +11,7 @@ BASELINES = [
     ("Symphonies",  6.36, 15.04),
     ("MonoOcc-S",   8.19, 13.80),
 ]
-VOOM = ("VOOM", 0.38, 8.4)
+VOOM = ("VOOM", 0.38, 8.6)
 
 LABEL_OFFSETS = {
     "L2COcc-D":    ( 6,  6, "left",  "center"),
