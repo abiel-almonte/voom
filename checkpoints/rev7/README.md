@@ -3,7 +3,7 @@
 Weights are not in this folder, they're hosted on HF:
 
 ```bash
-./scripts/download_weights.sh   # release/voom.safetensors
+./scripts/download_weights.sh   # release/voom-rev7.safetensors
 ```
 
 | Metric                 | Value / Details                                  |
