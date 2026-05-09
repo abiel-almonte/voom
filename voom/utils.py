@@ -12,6 +12,33 @@ def load_state_dict(path, device="cpu"):
     return ckpt["model"] if "model" in ckpt else ckpt
 
 
+def detect_arch(state_dict):
+    """
+    rev7 (deployed): out_ch=24, with_rgb_context=True.
+    rev14: out_ch=20, with_rgb_context=False.
+    """
+    out_ch = state_dict["rout.weight"].shape[0]
+    cproj_in = state_dict["cproj.0.weight"].shape[1]
+    return {"out_ch": out_ch, "with_rgb_context": cproj_in == 259}
+
+
+def load_voom(ckpt_path, base_cfg, device="cuda", dtype=None):
+    """Auto-detect arch and load weights into a VOOMv2 with matching shapes."""
+    from .model import VOOMv2
+
+    sd = load_state_dict(ckpt_path, device=device)
+    arch = detect_arch(sd)
+
+    cfg = dict(base_cfg)
+    cfg.update(arch)
+
+    model = VOOMv2(**cfg).to(device)
+    if dtype is not None:
+        model = model.to(dtype=dtype)
+    model.load_state_dict(sd, strict=False)
+    return model.eval(), arch
+
+
 def _make_norm(kind, ch):
     if kind == "group":
         groups = min(8, ch)
