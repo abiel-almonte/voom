@@ -75,8 +75,9 @@ dataset_config = {
         train["loss_weights"]["sem"] > 0 and len(train["semantic"]["enabled"]) > 0
     ),
     "load_depth": (
-        train["loss_weights"]["photo"] > 0 or train["loss_weights"]["depth"] > 0
+       train["loss_weights"]["depth"] > 0
     ),
+    "load_sem_2d": train["loss_weights"].get("sem_2d", 0) > 0,
 }
 
 val_dataset_config = {
