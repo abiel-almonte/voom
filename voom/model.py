@@ -20,6 +20,7 @@ class VOOMv2(nn.Module):
         grid_dim=(128, 32, 128),
         mpv=0.2,
         offset_m=(0, 0, 0),
+        with_rgb_context=False,  # rev7 cats rgb into cproj input; rev14 doesn't
     ) -> None:
 
         super().__init__()
@@ -34,10 +35,10 @@ class VOOMv2(nn.Module):
         self.dpt_head = dinov2.decode_head
         self.sampled_layers = sampled_layers
 
-        self.depth_feat = None
+        self.feat = None
 
         def _hook(mod, inp, out):
-            self.depth_feat = out
+            self.feat = out
 
         self.dpt_head.fusion_blocks[-1].register_forward_hook(_hook)
 
@@ -54,13 +55,17 @@ class VOOMv2(nn.Module):
             nn.Conv2d(embed_dim, depth_bins, 1),
         )
 
+        self.with_rgb_context = with_rgb_context
+        cproj_in = 256 + (3 if with_rgb_context else 0)
         self.cproj = nn.Sequential(
-            nn.Conv2d(256 + 3, embed_dim, 1),
+            nn.Conv2d(cproj_in, embed_dim, 1),
             nn.ReLU(),
             BasicBlock(embed_dim, embed_dim),
             BasicBlock(embed_dim, embed_dim),
             nn.Conv2d(embed_dim, embed_dim, 1),
         )
+
+        self.semantic_head = nn.Conv2d(embed_dim, 20, 1)
 
         self.rproj = nn.Conv3d(embed_dim, refine_dim, 1)
         self.rblok = nn.Sequential(
@@ -90,18 +95,19 @@ class VOOMv2(nn.Module):
         return layers
 
     def _lift_splat_refine(self, rgb, K, feat):
-        depth = self.dproj(feat)
+        depth_logits = self.dproj(feat)
+        if self.with_rgb_context:
+            rgb_resized = F.interpolate(
+                rgb, size=feat.shape[-2:], mode="bilinear", align_corners=True
+            )
+            context = self.cproj(torch.cat([rgb_resized, feat], dim=1))
+        else:
+            context = self.cproj(feat)
 
-        rgb_resized = F.interpolate(
-            rgb, size=depth.shape[-2:], mode="bilinear", align_corners=True
-        )
-
-        context = self.cproj(torch.cat([rgb_resized, feat], dim=1))
-
-        if self.training or not context.is_cuda:
+        if self.training or not context.is_cuda or context.dtype != torch.float16:
             grid = lift_splat(
                 context,
-                F.softmax(depth, dim=1),
+                F.softmax(depth_logits, dim=1),
                 K,
                 rgb.shape[-2:],
                 self.grid_dim,
@@ -128,7 +134,7 @@ class VOOMv2(nn.Module):
             context_nhwc = context.permute(0, 2, 3, 1).contiguous()
             grid = lift_splat_gather_fp16_nhwc_ch64(
                 context_nhwc,
-                F.softmax(depth, dim=1),
+                F.softmax(depth_logits, dim=1),
                 self.offsets,
                 self.pixs,
                 self.grid_dim,
@@ -139,7 +145,8 @@ class VOOMv2(nn.Module):
         grid = self.rout(grid)
 
         if self.training:
-            return grid, depth
+            semantic_logits = self.semantic_head(context)
+            return grid, depth_logits, semantic_logits
 
         return grid
 
@@ -147,4 +154,4 @@ class VOOMv2(nn.Module):
         layers = self._vit_backbone(rgb)
         _ = self.dpt_head(list(layers), img_metas=None)
 
-        return self._lift_splat_refine(rgb, K, self.depth_feat)
+        return self._lift_splat_refine(rgb, K, self.feat)
