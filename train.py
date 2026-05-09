@@ -7,7 +7,7 @@ import torch.nn.functional as F
 import yaml
 from torch.utils.data import DataLoader
 
-from voom import VOOMv2, SemanticKITTIDataset, ray_marching, render_gt
+from voom import VOOMv2, SemanticKITTIDataset, ray_marching, render_gt, load_state_dict
 import config
 
 log = logging.getLogger("voom.train")
@@ -16,7 +16,7 @@ log = logging.getLogger("voom.train")
 def setup_logging(ckpt_dir):
     Path(ckpt_dir).mkdir(parents=True, exist_ok=True)
     fmt = logging.Formatter("%(asctime)s %(message)s", datefmt="%H:%M:%S")
-    file_h = logging.FileHandler(Path(ckpt_dir) / "train.log", mode="w")
+    file_h = logging.FileHandler(Path(ckpt_dir) / "train.log", mode="a")
     stream_h = logging.StreamHandler()
 
     for h in (file_h, stream_h):
@@ -35,17 +35,29 @@ def loss_occ(pred_grid, gt_occ):
     return F.binary_cross_entropy_with_logits(pred_grid[:, 0:1], gt_occ)
 
 
-def loss_sem(pred_grid, gt_sem, gt_occ):
-    sem_logits = pred_grid[:, 4:]  # [b, 20, gx, gy, gz]
-    occ_mask = gt_occ[:, 0] > 0.5
+def loss_sem(pred_grid, gt_sem, class_weights=None):
+    target = gt_sem - 1
+    target[gt_sem == 0] = -1
+    return F.cross_entropy(
+        pred_grid[:, 1:], target, weight=class_weights, ignore_index=-1
+    )
 
-    if occ_mask.any():
-        return F.cross_entropy(
-            sem_logits.permute(0, 2, 3, 4, 1)[occ_mask],
-            gt_sem[occ_mask],
-            ignore_index=0,
+
+def loss_sem_2d(sem_2d_logits, gt_sem_2d, class_weights=None):
+    target = (
+        F.interpolate(
+            gt_sem_2d.unsqueeze(1).float(),
+            size=sem_2d_logits.shape[-2:],
+            mode="nearest",
         )
-    return torch.tensor(0.0, device="cuda")
+        .long()
+        .squeeze(1)
+    )
+    shifted = target - 1
+    shifted[target == 0] = -1
+    return F.cross_entropy(
+        sem_2d_logits[:, 1:], shifted, weight=class_weights, ignore_index=-1
+    )
 
 
 def loss_photo(pred_grid, rgb, da_depth, K):
@@ -134,6 +146,11 @@ def save_ckpt(model, optimizer, step, ckpt_dir):
 def load_ckpt(model, optimizer, init_path):
     if not init_path or not Path(init_path).exists():
         return 0
+
+    if Path(init_path).suffix == ".safetensors":
+        model.load_state_dict(load_state_dict(init_path), strict=False)
+        return 0
+
     ckpt = torch.load(init_path, weights_only=True)
     model.load_state_dict(ckpt["model"], strict=False)
     optimizer.load_state_dict(ckpt["optimizer"])
@@ -167,19 +184,27 @@ def main():
     if step:
         log.info(f"resumed from step {step}")
 
+    overrides = config.train.get("class_weights") or {}
+    class_weights = None
+    if overrides:
+        enabled = config.train["semantic"]["enabled"][1:]  # skip 'empty'
+        cw = [float(overrides.get(name, 1.0)) for name in enabled]
+        class_weights = torch.tensor(cw, dtype=torch.float32, device=device)
+        log.info(f"class weights: {dict(zip(enabled, cw))}")
+
     weights = config.train["loss_weights"]
     for epoch in range(config.train["epochs"]):
         epoch_metrics = defaultdict(float)
         epoch_steps = 0
 
         for batch in loader:
-            rgb, K, gt_occ, gt_sem, da_depth = [x.to(device) for x in batch]
+            rgb, K, gt_occ, gt_sem, da_depth, gt_sem_2d = [x.to(device) for x in batch]
 
-            pred_grid, depth_logits = model(rgb, K)
+            pred_grid, depth_logits, sem_2d_logits = model(rgb, K)
             losses = {
                 "occ": loss_occ(pred_grid, gt_occ),
-                "sem": loss_sem(pred_grid, gt_sem, gt_occ),
-                "photo": loss_photo(pred_grid, rgb, da_depth, K),
+                "sem": loss_sem(pred_grid, gt_sem, class_weights),
+                "sem_2d": loss_sem_2d(sem_2d_logits, gt_sem_2d, class_weights),
                 "depth": loss_depth(depth_logits, da_depth),
             }
             total = sum(weights.get(k, 0.0) * v for k, v in losses.items())
